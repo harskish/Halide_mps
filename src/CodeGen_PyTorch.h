@@ -35,7 +35,7 @@ public:
     void compile(const Module &module);
 
 private:
-    void compile(const LoweredFunc &func, bool is_cuda);
+    void compile(const LoweredFunc &func, bool is_cuda, bool is_metal);
 };
 
 }  // namespace Internal
