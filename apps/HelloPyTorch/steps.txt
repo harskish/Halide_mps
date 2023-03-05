@@ -1,0 +1,57 @@
+# Testing PT Halide OP
+
+wsl --version
+WSL version: 1.1.3.0
+Kernel version: 5.15.90.1
+WSLg version: 1.0.49
+MSRDC version: 1.2.3770
+Direct3D version: 1.608.2-61064218
+DXCore version: 10.0.25131.1002-220531-1700.rs-onecore-base2-hyp
+Windows version: 10.0.22621.1265
+
+nvcc --version
+Build cuda_11.8.r11.8/compiler.31833905_0
+
+uname -a
+Linux Aurora 5.15.90.1-microsoft-standard-WSL2 #1 SMP Fri Jan 27 02:56:13 UTC 2023 x86_64 x86_64 x86_64 GNU/Linux
+
+conda activate anyscale
+
+python --version
+Python 3.10.9
+
+python -c "import distutils, setuptools; print(distutils.__version__, setuptools.__version__)"
+3.10.9 59.5.0
+
+python -c "import torch; print(torch.__version__)"
+1.12.1
+
+mkdir out
+
+# Install CUDA in WSL:
+sudo apt-key del 7fa2af80
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.0-1_all.deb
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+sudo apt-get update
+apt-cache search cuda |  grep "cuda-1"
+sudo apt-get install cuda-11-7
+add /usr/local/cuda/bin to PATH
+
+##########################
+# Using Make-built Halide:
+##########################
+
+# Build Halide
+export LLVM_ROOT=~/llvm15; export LLVM_CONFIG=~/llvm15/bin/llvm-config
+sudo apt-get install zlib1g-dev
+cd ../..; make distrib
+
+# Build generators
+cd apps/HelloPyTorch
+make clean; rm -r out/*; HL_TARGET="host" make
+
+#######################################
+# Using CMake-built Halide (via Python)
+#######################################
+
+python build.py

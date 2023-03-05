@@ -3,6 +3,7 @@ import os
 import platform
 import re
 from setuptools import setup, find_packages
+from pathlib import Path
 
 from torch.utils.cpp_extension import BuildExtension
 import torch as th
@@ -25,15 +26,57 @@ def generate_pybind_wrapper(path, headers, has_cuda):
     with open(path, 'w') as fid:
         fid.write(s)
 
+# Remove forward declaration of scheduled pipeline
+# (which is called internally by lib)
+def _fix_scheduled_lib_header(pipeline_name: str, header: Path, remove_cuda_dirty_check=False):
+    src_in = header.read_text().splitlines()
+    src_out = []
+
+    FIXED_FLAG = '//HL_HEADER_FIXED'
+    if FIXED_FLAG in src_in:
+        return
+    
+    inside_broken = False
+    n_lines = len(src_in)
+    for i in range(n_lines):
+        curr = src_in[i]
+        next = src_in[i + 1] if i < n_lines - 1 else ''
+        
+        enter_func = 'HALIDE_FUNCTION_ATTRS' in curr and 'inline int' in next
+        enter_correct = enter_func and (f'{pipeline_name}_th_' in next)
+        enter_broken = enter_func and not enter_correct
+        exit_broken = curr.rstrip() == '}' and inside_broken
+
+        if enter_broken:
+            inside_broken = True
+            src_out.append('/*')
+        
+        if remove_cuda_dirty_check and 'host_dirty()' in curr:
+            print('Removing CUDA result tensor host_dirty() check')
+        else:
+            src_out.append(curr)
+
+        if exit_broken:
+            inside_broken = False
+            src_out.append('*/')
+    
+    src_out.append(FIXED_FLAG)
+    header.write_text('\n'.join(src_out))
+
 if __name__ == "__main__":
+    # When debugging:
+    # os.environ['BIN'] = 'out/x86-64-linux-avx-avx2-f16c-fma-sse41'; os.environ['HALIDE_DISTRIB_PATH'] = '../../distrib'
+
     # This is where the generate Halide ops headers live. We also generate the .cpp
     # wrapper in this directory
     build_dir = os.getenv("BIN")
+    print('build_dir', build_dir)
     if build_dir is None or not os.path.exists(build_dir):
         raise ValueError("Bin directory {} is invalid".format(build_dir))
 
     # Path to a distribution of Halide
     halide_dir = os.getenv("HALIDE_DISTRIB_PATH")
+    print('halide_dir', halide_dir)
     if halide_dir is None or not os.path.exists(halide_dir):
         raise ValueError("Halide directory {} is invalid".format(halide_dir))
 
@@ -46,14 +89,20 @@ if __name__ == "__main__":
     include_dirs = [build_dir, os.path.join(halide_dir, "include")]
     # Note that recent versions of PyTorch (at least 1.7.1) requires C++14
     # in order to compile extensions
-    compile_args = ["-std=c++14", "-g"]
+    compile_args = ["-std=c++17", "-g"]
     if platform.system() == "Darwin":  # on osx libstdc++ causes trouble
         compile_args += ["-stdlib=libc++"]
 
     re_cc = re.compile(r".*\.pytorch\.h")
     hl_srcs = [f for f in os.listdir(build_dir) if re_cc.match(f)]
 
-    ext_name = "halide_ops"
+    # Fix headers
+    for src in hl_srcs:
+        name = src.split('.pytorch.h')[0]
+        print('Fixing', src, name)
+        _fix_scheduled_lib_header(name, Path(build_dir) / src)
+
+    ext_name = "custom_halide_ops"
     hl_libs = []  # Halide op libraries to link to
     hl_headers = []  # Halide op headers to include in the wrapper
     for f in hl_srcs:
@@ -80,7 +129,8 @@ if __name__ == "__main__":
                                   include_dirs=include_dirs,
                                   extra_objects=hl_libs,
                                   libraries=["cuda"],  # Halide ops need the full cuda lib, not just the RT library
-                                  extra_compile_args=compile_args)
+                                  extra_compile_args=compile_args,
+                                  extra_link_args=['-L/usr/lib/wsl/lib']) # WSL: libcuda in non-standard location
     else:
         print("Generating CPU wrapper")
         generate_pybind_wrapper(wrapper_path, hl_headers, False)

@@ -26,9 +26,16 @@ void CodeGen_PyTorch::compile(const Module &module) {
         }
         stream << "#include \"ATen/cuda/CUDAContext.h\"\n";
         stream << "#include \"HalidePyTorchCudaHelpers.h\"\n";
+    } else if (target.has_feature(Target::Metal)) {
+        stream << "#include \"ATen/mps/MPSStream.h\"\n";
+        stream << "#include <c10/core/Stream.h>\n";
+        stream << "#include <c10/core/DeviceType.h>\n";
+        //stream << "#include \"ATen/mps/MPSLibrary.h\"\n"; // custom class in https://github.com/grimoire/TorchMPSCustomOpsDemo/
+        //stream << "#include \"ATen/mps/MPSUtils.h\"\n"; // custom, provides setMTLArg
     }
     stream << "#include \"HalideBuffer.h\"\n";
     stream << "#include \"HalidePyTorchHelpers.h\"\n";
+    stream << "#include <iostream>\n";
 
     stream << "\n";
 
@@ -50,14 +57,16 @@ void CodeGen_PyTorch::compile(const Module &module) {
             continue;
         }
         if (target.has_feature(Target::CUDA)) {
-            compile(f, true);
+            compile(f, true, false);
+        } else if (target.has_feature(Target::Metal)) {
+            compile(f, false, true);
         } else {
-            compile(f, false);
+            compile(f, false, false);
         }
     }
 }
 
-void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda) {
+void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda, bool is_metal) {
     // Don't put non-external function declarations in headers.
     std::vector<std::string> namespaces;
     std::string simple_name = extract_namespaces(f.name, namespaces);
@@ -107,6 +116,11 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda) {
         stream << get_indent() << "user_ctx.cuda_context = &ctx;\n";
         stream << get_indent() << "user_ctx.stream = &stream;\n";
         stream << get_indent() << "void* __user_context = (void*) &user_ctx;\n\n";
+    } else if (is_metal) {
+        stream << get_indent() << "// Setup Metal\n";
+        stream << get_indent() << "struct UserContext { at::mps::MPSStream* stream; } user_ctx;\n";
+        stream << get_indent() << "user_ctx.stream = at::mps::getCurrentMPSStream();\n";
+        stream << get_indent() << "void* __user_context = (void*) &user_ctx;\n\n";
     } else {
         stream << get_indent() << "void* __user_context = nullptr;\n\n";
     }
@@ -126,6 +140,15 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda) {
                 << c_print_name(buffer_arg.name)
                 << ", device_id);\n";
         }
+        
+        // TODO: enable
+        // if (is_metal) {
+        //     stream << get_indent();
+        //     stream
+        //         << "HLPT_CHECK_DEVICE("
+        //         << c_print_name(buffer_arg.name)
+        //         << ", device_id);\n";
+        // }
     }
     stream << "\n";
 
@@ -143,6 +166,9 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda) {
         if (is_cuda) {
             stream
                 << "_buffer = Halide::PyTorch::wrap_cuda<" << tp << ">(";
+        } else if (is_metal) {
+            stream
+                << "_buffer = Halide::PyTorch::wrap_metal<" << tp << ">(";
         } else {
             stream
                 << "_buffer = Halide::PyTorch::wrap<" << tp << ">(";

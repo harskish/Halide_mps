@@ -127,6 +127,7 @@ set(RUNTIME_BC
 set(RUNTIME_HEADER_FILES
     HalideBuffer.h
     HalidePyTorchCudaHelpers.h
+    HalidePyTorchMetalHelpers.h
     HalidePyTorchHelpers.h
     HalideRuntime.h
     HalideRuntimeCuda.h

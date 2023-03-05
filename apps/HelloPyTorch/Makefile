@@ -38,8 +38,12 @@ test: $(BIN)/.wrapper
 	@PYTHONPATH=$(EXT_LIB):${PYTHONPATH} $(PYTHON) test.py
 
 
+cpu: $(OPS)
+gpu: $(CUDA_OPS)
+pipelines: cpu gpu
+
 # Build the python PyTorch extension that links against the Halide operators
-$(BIN)/.wrapper: $(OPS) $(CUDA_OPS) setup.py
+$(BIN)/.wrapper: pipelines setup.py
 	@mkdir -p $(EXT_LIB)
 	@HAS_CUDA=$(HAS_CUDA) \
 	      HALIDE_DISTRIB_PATH=$(HALIDE_DISTRIB_PATH) \

@@ -15,8 +15,9 @@
 
 #include "HalideBuffer.h"
 
-// Forward declare the cuda_device_interface, for tensor wrapper.
+// Forward declare the device interfaces, for tensor wrapper.
 extern "C" const halide_device_interface_t *halide_cuda_device_interface();
+extern "C" const halide_device_interface_t *halide_metal_device_interface();
 
 #define HLPT_CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
 #define HLPT_CHECK_CUDA(x) AT_ASSERTM(x.type().is_cuda(), #x " must be a CUDA tensor")
@@ -90,6 +91,39 @@ inline Buffer<scalar_t> wrap(at::Tensor &tensor) {
     scalar_t *pData = tensor.data<scalar_t>();
 #endif
     return Buffer<scalar_t>(pData, dims);
+}
+
+// cmake --build build && cmake --install build --prefix halide-install
+template<class scalar_t>
+inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
+    check_type<scalar_t>(tensor);
+    std::vector<int> dims = get_dims(tensor);
+    //std::cout << "---Calling wrap_metal(at::Tensor&)" << std::endl;
+    scalar_t *pData = tensor.data_ptr<scalar_t>();
+    AT_ASSERTM(tensor.device().type() == c10::DeviceType::MPS, "expected input tensor to be on an MPS device.");
+
+    // auto* self_ = self.unsafeGetTensorImpl() ?
+    // Check that offset is zero
+    // Check that strides are normal
+    c10::TensorImpl* impl = tensor.unsafeGetTensorImpl();
+    //std::cout << "---TensorImpl is at " << impl << std::endl;
+    c10::StorageImpl* storage = impl->storage().unsafeGetStorageImpl();
+    c10::SymInt offset = impl->storage_offset();
+    //std::cout << "---Storage is at " << storage << std::endl;
+    //std::cout << "---Offset is " << offset << std::endl;
+    //std::cout << "--tensor.sizes() = " << tensor.sizes() << std::endl;
+    //std::cout << "--tensor.is_contiguous() = " << tensor.is_contiguous() << std::endl;
+    AT_ASSERTM(offset == c10::SymInt(0), "Expected zero offset on MPS storage.");
+
+    Buffer<scalar_t> buffer(dims);
+
+    const halide_device_interface_t *metal_interface = halide_metal_device_interface();
+    int err = buffer.device_wrap_native(metal_interface, (uint64_t)pData);
+    AT_ASSERTM(err == 0, "(Metal) halide_device_wrap failed");
+
+    buffer.set_device_dirty();
+
+    return buffer;
 }
 
 template<class scalar_t>

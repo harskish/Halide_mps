@@ -11,6 +11,7 @@
 #include "HalideRuntimeCuda.h"
 #include "cuda.h"
 #include "cuda_runtime.h"
+#include <iostream>
 
 namespace Halide {
 namespace PyTorch {
@@ -30,7 +31,8 @@ typedef struct UserContext {
 // Replace Halide weakly-linked CUDA handles
 extern "C" {
 
-int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create = true) {
+int halide_cuda_acquire_context_fun(void *user_context, CUcontext *ctx, bool create = true) {
+    //std::cout << "---Calling overridden halide_cuda_acquire_context().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         *ctx = *user_ctx->cuda_context;
@@ -40,7 +42,8 @@ int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create 
     return halide_error_code_success;
 }
 
-int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) {
+int halide_cuda_get_stream_fun(void *user_context, CUcontext ctx, CUstream *stream) {
+    //std::cout << "---Calling overridden halide_cuda_get_stream().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         *stream = *user_ctx->stream;
@@ -50,7 +53,31 @@ int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) 
     return halide_error_code_success;
 }
 
+#ifdef _MSC_VER
+
+// MSVC does not support weak linkage, must set overrides at runtime
+void set_cuda_fun_overrides() {
+    halide_set_cuda_acquire_context((halide_cuda_acquire_context_t)halide_cuda_acquire_context_fun);
+    halide_set_cuda_get_stream((halide_cuda_get_stream_t)halide_cuda_get_stream_fun);
+    //std::cout << "---TODO: need to override halide_get_gpu_device() as well!\n";
+}
+
+#else
+
+void set_cuda_fun_overrides() {
+    return; // no-op
+}
+
+int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create = true) {
+    return halide_cuda_acquire_context_fun(user_context, ctx, create);
+}
+
+int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) {
+    return halide_cuda_get_stream_fun(user_context, ctx, stream);
+}
+
 int halide_get_gpu_device(void *user_context) {
+    //std::cout << "---Calling overridden halide_get_gpu_device().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         return user_ctx->device_id;
@@ -58,6 +85,8 @@ int halide_get_gpu_device(void *user_context) {
         return 0;
     }
 }
+
+#endif // _MSC_VER
 
 }  // extern "C"
 

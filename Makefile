@@ -211,6 +211,9 @@ GCC_MINOR_VERSION := $(shell $(CXX) -dumpfullversion -dumpversion | cut -f2 -d.)
 ifeq (1,$(shell expr $(GCC_MAJOR_VERSION) \> 5 \| $(GCC_MAJOR_VERSION) = 5 \& $(GCC_MINOR_VERSION) \>= 1))
 CXX_WARNING_FLAGS += -Wsuggest-override
 endif
+ifeq (1,$(shell expr $(GCC_MAJOR_VERSION) \>= 11))
+CXX_WARNING_FLAGS += -Wno-error=mismatched-new-delete
+endif
 endif
 
 ifneq (,$(findstring clang,$(CXX_VERSION)))

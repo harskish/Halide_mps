@@ -2,7 +2,7 @@
 
 # We need to import torch before loading the custom modules
 import torch as th
-import halide_ops as ops
+import custom_halide_ops as ops
 
 # TODO(mgharbi): maybe find a way to wrap function and module directly in C++
 # instead of generating the C++ wrapper on the fly?

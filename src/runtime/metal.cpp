@@ -32,6 +32,10 @@ struct mtl_library;
 struct mtl_function;
 struct mtl_compile_options;
 
+WEAK void metal_pre_run(void* user_context) {
+    return;
+}
+
 WEAK mtl_buffer *new_buffer(mtl_device *device, size_t length) {
     typedef mtl_buffer *(*new_buffer_method)(objc_id device, objc_sel sel, size_t length, size_t options);
     new_buffer_method method = (new_buffer_method)&objc_msgSend;
@@ -39,7 +43,7 @@ WEAK mtl_buffer *new_buffer(mtl_device *device, size_t length) {
                      length, 0 /* MTLResourceCPUCacheModeDefaultCache | MTLResourceStorageModeShared */);
 }
 
-WEAK mtl_command_queue *new_command_queue(mtl_device *device) {
+WEAK mtl_command_queue *new_command_queue(mtl_device *device, void *user_context) {
     typedef mtl_command_queue *(*new_command_queue_method)(objc_id dev, objc_sel sel);
     new_command_queue_method method = (new_command_queue_method)&objc_msgSend;
     return (mtl_command_queue *)(*method)(device, sel_getUid("newCommandQueue"));
@@ -259,7 +263,8 @@ WEAK void *nsarray_first_object(objc_id arr) {
 // intended for non-GUI apps.  Newer versions of macOS (10.15+)
 // will not return a valid device if MTLCreateSystemDefaultDevice()
 // is used from a non-GUI app.
-WEAK mtl_device *get_default_mtl_device() {
+WEAK mtl_device *get_default_mtl_device(void *user_context) {
+    debug(user_context) << "---Calling vanilla get_default_mtl_device()\n";
     mtl_device *device = (mtl_device *)MTLCreateSystemDefaultDevice();
     if (device == nullptr) {
         // We assume Metal.framework is already loaded
@@ -343,17 +348,17 @@ WEAK int halide_metal_acquire_context(void *user_context, mtl_device **device_re
 #ifdef DEBUG_RUNTIME
     halide_start_clock(user_context);
 #endif
-
+    
     if (device == nullptr && create) {
         debug(user_context) << "Metal - Allocating: MTLCreateSystemDefaultDevice\n";
-        device = get_default_mtl_device();
+        device = get_default_mtl_device(user_context);
         if (device == nullptr) {
             __atomic_clear(&thread_lock, __ATOMIC_RELEASE);
             error(user_context) << "halide_metal_acquire_context: cannot allocate system default device.";
             return halide_error_code_generic_error;
         }
         debug(user_context) << "Metal - Allocating: new_command_queue\n";
-        queue = new_command_queue(device);
+        queue = new_command_queue(device, user_context);
         if (queue == nullptr) {
             release_ns_object(device);
             device = nullptr;
@@ -724,7 +729,7 @@ WEAK int halide_metal_copy_to_host(void *user_context, halide_buffer_t *buffer) 
     return halide_error_code_success;
 }
 
-WEAK int halide_metal_run(void *user_context,
+int _halide_metal_run_impl(void *user_context,
                           void *state_ptr,
                           const char *entry_name,
                           int blocksX, int blocksY, int blocksZ,
@@ -733,9 +738,11 @@ WEAK int halide_metal_run(void *user_context,
                           halide_type_t arg_types[],
                           void *args[],
                           int8_t arg_is_buffer[]) {
+
 #ifdef DEBUG_RUNTIME
     uint64_t t_before = halide_current_time_ns(user_context);
 #endif
+    //  cmake --build build && cmake --install build --prefix halide-install
 
     MetalContextHolder metal_context(user_context, true);
     if (metal_context.error()) {
@@ -899,6 +906,25 @@ WEAK int halide_metal_run(void *user_context,
 #endif
 
     return halide_error_code_success;
+}
+
+WEAK int halide_metal_run(void *user_context,
+                          void *state_ptr,
+                          const char *entry_name,
+                          int blocksX, int blocksY, int blocksZ,
+                          int threadsX, int threadsY, int threadsZ,
+                          int shared_mem_bytes,
+                          halide_type_t arg_types[],
+                          void *args[],
+                          int8_t arg_is_buffer[]) {
+
+    metal_pre_run(user_context);
+    
+    return _halide_metal_run_impl(
+        user_context, state_ptr, entry_name,
+        blocksX, blocksY, blocksZ,
+        threadsX, threadsY, threadsZ,
+        shared_mem_bytes, arg_types, args, arg_is_buffer);
 }
 
 WEAK int halide_metal_device_and_host_malloc(void *user_context, struct halide_buffer_t *buffer) {
