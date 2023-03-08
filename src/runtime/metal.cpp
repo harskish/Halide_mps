@@ -347,8 +347,21 @@ WEAK int halide_metal_acquire_context(void *user_context, mtl_device **device_re
 #ifdef DEBUG_RUNTIME
     halide_start_clock(user_context);
 #endif
+    
+    if (user_context != nullptr) {
+        debug(user_context) << "Metal - Using user_context at: " << user_context << "\n";
 
-    if (device == nullptr && create) {
+        struct UserContext { void* device; void* queue; }; // MTLDevice, MTLCommandQueue
+        UserContext* ctx = (UserContext*)user_context;
+
+        // Get device and queue from user context
+        device = (mtl_device*)ctx->device; // objC type
+        queue = (mtl_command_queue*)ctx->queue; // objC type
+
+        // debug(user_context) << "Metal - got device: " << device << "\n";
+        // debug(user_context) << "Metal - got queue: " << queue << "\n";
+    }
+    else if (device == nullptr && create) {
         debug(user_context) << "Metal - Allocating: MTLCreateSystemDefaultDevice\n";
         device = get_default_mtl_device();
         if (device == nullptr) {

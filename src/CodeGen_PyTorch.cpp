@@ -120,40 +120,42 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda, bool is_metal)
         // https://developer.apple.com/documentation/metal/mtldevice/1433388-newcommandqueue
         stream << get_indent() << "using at::mps::MPSStream;\n";
         stream << get_indent() << "MPSStream* stream = at::mps::getCurrentMPSStream();\n";
-        stream << get_indent() << "std::cout << \"stream: \" << stream << std::endl;\n";
+        //stream << get_indent() << "std::cout << \"stream: \" << stream << std::endl;\n";
+
+        // Pass data to Halide
+        stream << get_indent() << "struct UserContext { void* device; void* queue; } user_ctx;\n";
+        stream << get_indent() << "user_ctx.device = stream->device();\n";
+        stream << get_indent() << "user_ctx.queue = stream->commandQueue();\n";
+        stream << get_indent() << "void* __user_context = (void*) &user_ctx;\n\n";
+
+        // Get device associated with stream
+        // typedef void* MTLDevice;
+        // stream << get_indent() << "void* device = stream->device();\n";
+        // stream << get_indent() << "std::cout << \"device: \" << device << std::endl;\n";
 
         // Get command queue that was created in stream constructor
-        stream << get_indent() << "MTLCommandQueue_t cmdQueue = stream->commandQueue();\n";
-        stream << get_indent() << "std::cout << \"cmdQueue: \" << cmdQueue << std::endl;\n";
+        // typedef void* MTLCommandQueue_t;
+        // stream << get_indent() << "void* cmdQueue = stream->commandQueue();\n";
+        // stream << get_indent() << "std::cout << \"cmdQueue: \" << cmdQueue << std::endl;\n";
 
         // Creates new command buffer from command queue
         // MTLCommandQueue.makeCommandBuffer() -> MTLCommandBuffer
         // => Should call ObjC code from <MPSStream.mm>, is that file being compiled?
         //    (or is the symbol found in torch itself?)
-        stream << get_indent() << "MTLCommandBuffer_t commandBuff = stream->commandBuffer();\n"; // <MPSStream.h>
-        stream << get_indent() << "std::cout << \"commandBuff: \" << commandBuff << std::endl;\n";
+        // stream << get_indent() << "MTLCommandBuffer_t commandBuff = stream->commandBuffer();\n"; // <MPSStream.h>
+        // stream << get_indent() << "std::cout << \"commandBuff: \" << commandBuff << std::endl;\n";
         
         // ObjC calls, not needed? (can call via msgSend on Halide side)
         //stream << get_indent() << "MTLComputeCommandEncoder_t compute_encoder = [commandBuff computeCommandEncoder];\n"; // creates new
 
-        stream << get_indent() << "dispatch_queue_t dptQueue = stream->queue();\n";
-        stream << get_indent() << "std::cout << \"dptQueue: \" << dptQueue << std::endl;\n";
+        // stream << get_indent() << "dispatch_queue_t dptQueue = stream->queue();\n";
+        // stream << get_indent() << "std::cout << \"dptQueue: \" << dptQueue << std::endl;\n";
 
-        stream << get_indent() << "c10::DeviceIndex devIdx = stream->device_index();\n";
-        stream << get_indent() << "std::cout << \"devIdx: \" << devIdx << std::endl;\n";
-        
-        stream << get_indent() << "MTLDevice_t device = stream->device();\n";
-        stream << get_indent() << "std::cout << \"device: \" << device << std::endl;\n";
+        // stream << get_indent() << "c10::DeviceIndex devIdx = stream->device_index();\n";
+        // stream << get_indent() << "std::cout << \"devIdx: \" << devIdx << std::endl;\n";
 
-        stream << get_indent() << "c10::Stream streamRaw = stream->unwrap();\n";
-        stream << get_indent() << "std::cout << \"streamRaw: \" << streamRaw << std::endl;\n";
-        
-        stream << get_indent() << "struct UserContext { c10::DeviceIndex device_id; MPSStream* stream; } user_ctx;\n";
-        stream << get_indent() << "user_ctx.device_id = devIdx;\n";
-        stream << get_indent() << "user_ctx.stream = stream;\n";
-        stream << get_indent() << "void* __user_context = (void*) &user_ctx;\n\n";
-
-        stream << get_indent() << "std::cout << \"user_ctx.stream: \" << user_ctx.stream << std::endl;\n";
+        // stream << get_indent() << "c10::Stream streamRaw = stream->unwrap();\n";
+        // stream << get_indent() << "std::cout << \"streamRaw: \" << streamRaw << std::endl;\n";
     } else {
         stream << get_indent() << "void* __user_context = nullptr;\n\n";
     }

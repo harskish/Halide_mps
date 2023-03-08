@@ -229,7 +229,8 @@ using stringstream = StringStreamPrinter<>;
 #ifdef DEBUG_RUNTIME
 using debug = BasicPrinter<>;
 #else
-using debug = SinkPrinter;
+//using debug = SinkPrinter;
+using debug = BasicPrinter<>;
 #endif
 }  // namespace
 
