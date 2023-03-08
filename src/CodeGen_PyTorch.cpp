@@ -28,6 +28,7 @@ void CodeGen_PyTorch::compile(const Module &module) {
     } else if (target.has_feature(Target::Metal)) {
         stream << "#include \"ATen/mps/MPSStream.h\"\n";
         stream << "#include <c10/core/Stream.h>\n";
+        stream << "#include <c10/core/DeviceType.h>;\n";
         //stream << "#include \"ATen/mps/MPSLibrary.h\"\n"; // custom class in https://github.com/grimoire/TorchMPSCustomOpsDemo/
         //stream << "#include \"ATen/mps/MPSUtils.h\"\n"; // custom, provides setMTLArg
     }
@@ -175,6 +176,15 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda, bool is_metal)
                 << c_print_name(buffer_arg.name)
                 << ", device_id);\n";
         }
+        
+        // TODO: enable
+        // if (is_metal) {
+        //     stream << get_indent();
+        //     stream
+        //         << "HLPT_CHECK_DEVICE("
+        //         << c_print_name(buffer_arg.name)
+        //         << ", device_id);\n";
+        // }
     }
     stream << "\n";
 
@@ -192,6 +202,9 @@ void CodeGen_PyTorch::compile(const LoweredFunc &f, bool is_cuda, bool is_metal)
         if (is_cuda) {
             stream
                 << "_buffer = Halide::PyTorch::wrap_cuda<" << tp << ">(";
+        } else if (is_metal) {
+            stream
+                << "_buffer = Halide::PyTorch::wrap_metal<" << tp << ">(";
         } else {
             stream
                 << "_buffer = Halide::PyTorch::wrap<" << tp << ">(";

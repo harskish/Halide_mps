@@ -15,8 +15,9 @@
 
 #include "HalideBuffer.h"
 
-// Forward declare the cuda_device_interface, for tensor wrapper.
+// Forward declare the device interfaces, for tensor wrapper.
 const halide_device_interface_t *halide_cuda_device_interface();
+const halide_device_interface_t *halide_metal_device_interface();
 
 #define HLPT_CHECK_CONTIGUOUS(x) AT_ASSERTM(x.is_contiguous(), #x " must be contiguous")
 #define HLPT_CHECK_CUDA(x) AT_ASSERTM(x.type().is_cuda(), #x " must be a CUDA tensor")
@@ -93,6 +94,26 @@ inline Buffer<scalar_t> wrap(at::Tensor &tensor) {
     scalar_t *pData = tensor.data<scalar_t>();
 #endif
     return Buffer<scalar_t>(pData, dims);
+}
+
+// cmake --build build && cmake --install build --prefix halide-install
+template<class scalar_t>
+inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
+    check_type<scalar_t>(tensor);
+    std::vector<int> dims = get_dims(tensor);
+    std::cout << "Calling wrap_metal(at::Tensor&)" << std::endl;
+    scalar_t *pData = tensor.data_ptr<scalar_t>();
+    AT_ASSERTM(tensor.device().type() == c10::DeviceType::MPS, "expected input tensor to be on an MPS device.");
+
+    Buffer<scalar_t> buffer(dims);
+
+    const halide_device_interface_t *metal_interface = halide_metal_device_interface();
+    int err = buffer.device_wrap_native(metal_interface, (uint64_t)pData);
+    AT_ASSERTM(err == 0, "(Metal) halide_device_wrap failed");
+
+    buffer.set_device_dirty();
+
+    return buffer;
 }
 
 template<class scalar_t>

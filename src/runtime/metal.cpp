@@ -753,6 +753,7 @@ WEAK int halide_metal_run(void *user_context,
 #ifdef DEBUG_RUNTIME
     uint64_t t_before = halide_current_time_ns(user_context);
 #endif
+    //  cmake --build build && cmake --install build --prefix halide-install
 
     MetalContextHolder metal_context(user_context, true);
     if (metal_context.error != 0) {
