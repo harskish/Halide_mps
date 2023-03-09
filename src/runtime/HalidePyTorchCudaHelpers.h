@@ -12,6 +12,15 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 
+// From src\runtime\HalideRuntimeCuda.h
+//typedef int (*halide_cuda_acquire_context_t)(void *,   // user_context
+//                                             void **,  // cuda context out parameter
+//                                             bool);    // should create a context if none exist
+//typedef int (*halide_cuda_release_context_t)(void * /* user_context */);
+//typedef int (*halide_cuda_get_stream_t)(void *,    // user_context
+//                                        void *,    // context
+//                                        void **);  // stream out parameter
+
 namespace Halide {
 namespace PyTorch {
 
@@ -30,6 +39,8 @@ typedef struct UserContext {
 // Replace Halide weakly-linked CUDA handles
 extern "C" {
 
+#ifndef _MSC_VER
+// TODO - Windows: must call halide_set_cuda_acquire_context() instead
 int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create = true) {
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
@@ -39,7 +50,10 @@ int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create 
     }
     return 0;
 }
+#endif
 
+#ifndef _MSC_VER
+// TODO - Windows: must call halide_set_cuda_get_stream() instead
 int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) {
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
@@ -49,7 +63,10 @@ int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) 
     }
     return 0;
 }
+#endif
 
+// TODO: Figure out Windows alternative
+#ifndef _MSC_VER
 int halide_get_gpu_device(void *user_context) {
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
@@ -58,6 +75,7 @@ int halide_get_gpu_device(void *user_context) {
         return 0;
     }
 }
+#endif
 
 }  // extern "C"
 
