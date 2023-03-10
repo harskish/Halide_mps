@@ -82,6 +82,8 @@ extern halide_cuda_release_context_t halide_set_cuda_release_context(halide_cuda
 extern halide_cuda_get_stream_t halide_set_cuda_get_stream(halide_cuda_get_stream_t handler);
 // @}
 
+extern void set_cuda_fun_overrides(); // defined in HalidePyTorchCudaHelpers.h
+
 #ifdef __cplusplus
 }  // End extern "C"
 #endif
