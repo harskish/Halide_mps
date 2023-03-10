@@ -66,13 +66,9 @@ int halide_cuda_get_stream_fun(void *user_context, CUcontext ctx, CUstream *stre
 
 // MSVC does not support weak linkage, must set overrides at runtime
 void set_cuda_fun_overrides() {
-    std::cout << "---Setting CUDA overrides.\n";
-
-    // cannot convert argument 1 from 'int (__cdecl *)(void *,CUcontext *,bool)' to 'halide_cuda_acquire_context_t'
-
     halide_set_cuda_acquire_context((halide_cuda_acquire_context_t)halide_cuda_acquire_context_fun);
     halide_set_cuda_get_stream((halide_cuda_get_stream_t)halide_cuda_get_stream_fun);
-    std::cout << "---TODO: need to override halide_get_gpu_device() as well!";
+    std::cout << "---TODO: need to override halide_get_gpu_device() as well!\n";
 }
 
 #else
@@ -90,7 +86,7 @@ int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) 
 }
 
 int halide_get_gpu_device(void *user_context) {
-    std::cout << "Calling overridden halide_get_gpu_device().\n";
+    std::cout << "---Calling overridden halide_get_gpu_device().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         return user_ctx->device_id;
