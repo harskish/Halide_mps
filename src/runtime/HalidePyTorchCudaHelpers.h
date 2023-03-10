@@ -12,6 +12,8 @@
 #include "cuda.h"
 #include "cuda_runtime.h"
 
+#include <iostream>
+
 // From src\runtime\HalideRuntimeCuda.h
 //typedef int (*halide_cuda_acquire_context_t)(void *,   // user_context
 //                                             void **,  // cuda context out parameter
@@ -42,6 +44,7 @@ extern "C" {
 #ifndef _MSC_VER
 // TODO - Windows: must call halide_set_cuda_acquire_context() instead
 int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create = true) {
+    std::cout << "Calling overridden halide_cuda_acquire_context().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         *ctx = *user_ctx->cuda_context;
@@ -55,6 +58,7 @@ int halide_cuda_acquire_context(void *user_context, CUcontext *ctx, bool create 
 #ifndef _MSC_VER
 // TODO - Windows: must call halide_set_cuda_get_stream() instead
 int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) {
+    std::cout << "Calling overridden halide_cuda_get_stream().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         *stream = *user_ctx->stream;
@@ -68,6 +72,7 @@ int halide_cuda_get_stream(void *user_context, CUcontext ctx, CUstream *stream) 
 // TODO: Figure out Windows alternative
 #ifndef _MSC_VER
 int halide_get_gpu_device(void *user_context) {
+    std::cout << "Calling overridden halide_get_gpu_device().\n";
     if (user_context != nullptr) {
         Halide::PyTorch::UserContext *user_ctx = (Halide::PyTorch::UserContext *)user_context;
         return user_ctx->device_id;
