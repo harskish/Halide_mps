@@ -39,7 +39,7 @@ WEAK mtl_buffer *new_buffer(mtl_device *device, size_t length) {
                      length, 0 /* MTLResourceCPUCacheModeDefaultCache | MTLResourceStorageModeShared */);
 }
 
-WEAK mtl_command_queue *new_command_queue(mtl_device *device) {
+WEAK mtl_command_queue *new_command_queue(mtl_device *device, void *user_context) {
     typedef mtl_command_queue *(*new_command_queue_method)(objc_id dev, objc_sel sel);
     new_command_queue_method method = (new_command_queue_method)&objc_msgSend;
     return (mtl_command_queue *)(*method)(device, sel_getUid("newCommandQueue"));
@@ -259,7 +259,8 @@ WEAK void *nsarray_first_object(objc_id arr) {
 // intended for non-GUI apps.  Newer versions of macOS (10.15+)
 // will not return a valid device if MTLCreateSystemDefaultDevice()
 // is used from a non-GUI app.
-WEAK mtl_device *get_default_mtl_device() {
+WEAK mtl_device *get_default_mtl_device(void *user_context) {
+    debug(user_context) << "---Calling vanilla get_default_mtl_device()\n";
     mtl_device *device = (mtl_device *)MTLCreateSystemDefaultDevice();
     if (device == nullptr) {
         // We assume Metal.framework is already loaded
@@ -348,29 +349,16 @@ WEAK int halide_metal_acquire_context(void *user_context, mtl_device **device_re
     halide_start_clock(user_context);
 #endif
     
-    if (user_context != nullptr) {
-        debug(user_context) << "Metal - Using user_context at: " << user_context << "\n";
-
-        struct UserContext { void* device; void* queue; }; // MTLDevice, MTLCommandQueue
-        UserContext* ctx = (UserContext*)user_context;
-
-        // Get device and queue from user context
-        device = (mtl_device*)ctx->device; // objC type
-        queue = (mtl_command_queue*)ctx->queue; // objC type
-
-        // debug(user_context) << "Metal - got device: " << device << "\n";
-        // debug(user_context) << "Metal - got queue: " << queue << "\n";
-    }
-    else if (device == nullptr && create) {
+    if (device == nullptr && create) {
         debug(user_context) << "Metal - Allocating: MTLCreateSystemDefaultDevice\n";
-        device = get_default_mtl_device();
+        device = get_default_mtl_device(user_context);
         if (device == nullptr) {
             error(user_context) << "Metal: cannot allocate system default device.\n";
             __atomic_clear(&thread_lock, __ATOMIC_RELEASE);
             return -1;
         }
         debug(user_context) << "Metal - Allocating: new_command_queue\n";
-        queue = new_command_queue(device);
+        queue = new_command_queue(device, user_context);
         if (queue == nullptr) {
             error(user_context) << "Metal: cannot allocate command queue.\n";
             release_ns_object(device);
