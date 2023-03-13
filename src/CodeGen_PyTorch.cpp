@@ -51,13 +51,10 @@ void CodeGen_PyTorch::compile(const Module &module) {
 
     for (const auto &f : module.functions()) {
         if (target.has_feature(Target::CUDA)) {
-            std::cout << "Has CUDA\n";
             compile(f, true, false);
         } else if (target.has_feature(Target::Metal)) {
-            std::cout << "Has Metal\n";
             compile(f, false, true);
         } else {
-            std::cout << "Just CPU\n";
             compile(f, false, false);
         }
     }

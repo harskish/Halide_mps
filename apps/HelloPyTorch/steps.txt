@@ -23,15 +23,27 @@ Python 3.10.9
 python -c "import distutils, setuptools; print(distutils.__version__, setuptools.__version__)"
 3.10.9 59.5.0
 
+python -c "import torch; print(torch.__version__)"
+1.12.1
+
 mkdir out
 
+
+##########################
+# Using Make-built Halide:
+##########################
+
 # Build Halide
-#export HALIDE_DISTRIB_PATH="~/halide-install"  # built with anyscale repo
 export LLVM_ROOT=~/llvm15; export LLVM_CONFIG=~/llvm15/bin/llvm-config
 sudo apt-get install zlib1g-dev
 cd ../..; make distrib
-#export HALIDE_DISTRIB_PATH="../../distrib"
 
 # Build generators
 cd apps/HelloPyTorch
 make clean; rm -r out/*; HL_TARGET="host" make
+
+#######################################
+# Using CMake-built Halide (via Python)
+#######################################
+
+python build.py
