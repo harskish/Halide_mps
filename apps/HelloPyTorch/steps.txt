@@ -28,6 +28,14 @@ python -c "import torch; print(torch.__version__)"
 
 mkdir out
 
+# Install CUDA in WSL:
+sudo apt-key del 7fa2af80
+wget https://developer.download.nvidia.com/compute/cuda/repos/wsl-ubuntu/x86_64/cuda-keyring_1.0-1_all.deb
+sudo dpkg -i cuda-keyring_1.0-1_all.deb
+sudo apt-get update
+apt-cache search cuda |  grep "cuda-1"
+sudo apt-get install cuda-11-7
+add /usr/local/cuda/bin to PATH
 
 ##########################
 # Using Make-built Halide:
