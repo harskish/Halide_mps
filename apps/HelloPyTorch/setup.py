@@ -102,7 +102,7 @@ if __name__ == "__main__":
         print('Fixing', src, name)
         _fix_scheduled_lib_header(name, Path(build_dir) / src)
 
-    ext_name = "halide_ops"
+    ext_name = "custom_halide_ops"
     hl_libs = []  # Halide op libraries to link to
     hl_headers = []  # Halide op headers to include in the wrapper
     for f in hl_srcs:
