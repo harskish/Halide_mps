@@ -69,33 +69,26 @@ gt = torch.ones(1, 2, 8, 8, device='cuda')*4
 ####################
 from halide_ops.halide_pt_op import hl_torch_op
 
-def HlVars(*args):
-    return (hl.Var(n) for n in args)
-
 @hl_torch_op
 def vadd(a, b, target: hl.Target):
-    x, y, c, n = HlVars('x', 'y', 'c', 'n')
+    x, y, c, n = hl.vars('x y c n')
     out = hl.Func('output')
     out[x, y, c, n] = a[x, y, c, n] + b[x, y, c, n]
 
-    tx, xy, cn = HlVars('tx', 'xy', 'cn')
-    allvars = hl.Var('allvars')
-
+    tx, xy, cn, allvars = hl.vars('tx xy cn allvars')
     if target.has_gpu_feature():
-        out \
+        return out \
             .fuse(x, y, xy) \
             .fuse(c, n, cn) \
             .fuse(xy, cn, allvars) \
             .gpu_tile(allvars, tx, 128)
     else:
-        out \
+        return out \
             .compute_root() \
             .fuse(c, n, cn) \
             .fuse(y, cn, allvars) \
             .parallel(allvars, 8) \
             .vectorize(x, 8)
-
-    return out
 
 output = torch.zeros_like(gt)
 vadd(a, b, out=output)
