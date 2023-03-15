@@ -85,12 +85,9 @@ template<class scalar_t>
 inline Buffer<scalar_t> wrap(at::Tensor &tensor) {
     check_type<scalar_t>(tensor);
     std::vector<int> dims = get_dims(tensor);
-    std::cout << "Calling wrap(at::Tensor&)" << std::endl;
 #if HL_PYTORCH_API_VERSION >= 13
-    std::cout << "HL_PT_API >= 13" << std::endl;
     scalar_t *pData = tensor.data_ptr<scalar_t>();
 #else
-    std::cout << "HL_PT_API < 13" << std::endl;
     scalar_t *pData = tensor.data<scalar_t>();
 #endif
     return Buffer<scalar_t>(pData, dims);
