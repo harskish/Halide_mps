@@ -98,7 +98,7 @@ template<class scalar_t>
 inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
     check_type<scalar_t>(tensor);
     std::vector<int> dims = get_dims(tensor);
-    std::cout << "Calling wrap_metal(at::Tensor&)" << std::endl;
+    //std::cout << "---Calling wrap_metal(at::Tensor&)" << std::endl;
     scalar_t *pData = tensor.data_ptr<scalar_t>();
     AT_ASSERTM(tensor.device().type() == c10::DeviceType::MPS, "expected input tensor to be on an MPS device.");
 
