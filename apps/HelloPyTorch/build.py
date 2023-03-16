@@ -1,10 +1,8 @@
 import torch
 from pathlib import Path
 from halide_ops.create_wheel import make_editable_install
-halide_path = Path(__file__).parents[3] / 'halide_develop_install'
-make_editable_install(halide_path)
-import halide as hl # type: ignore
-assert Path(hl.__file__).as_posix().startswith(halide_path.as_posix()), 'Wrong import dir'
+make_editable_install()
+import halide as hl
 
 from halide_ops.halide_pt_op import build_pt_exts, build_pipeline
 
