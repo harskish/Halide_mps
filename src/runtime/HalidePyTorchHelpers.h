@@ -102,6 +102,17 @@ inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
     scalar_t *pData = tensor.data_ptr<scalar_t>();
     AT_ASSERTM(tensor.device().type() == c10::DeviceType::MPS, "expected input tensor to be on an MPS device.");
 
+    // auto* self_ = self.unsafeGetTensorImpl() ?
+    // Check that offset is zero
+    // Check that strides are normal
+    c10::TensorImpl* impl = tensor.unsafeGetTensorImpl();
+    std::cout << "---TensorImpl is at " << impl << std::endl;
+    c10::StorageImpl* storage = impl->storage().unsafeGetStorageImpl();
+    c10::SymInt offset = impl->storage_offset();
+    std::cout << "---Storage is at " << storage << " " << typeid(storage).name() << std::endl;
+    std::cout << "---Offset is " << offset << " " << typeid(offset).name() << std::endl;
+    AT_ASSERTM(offset == 0, "Expected zero offset on MPS storage.");
+
     Buffer<scalar_t> buffer(dims);
 
     const halide_device_interface_t *metal_interface = halide_metal_device_interface();
