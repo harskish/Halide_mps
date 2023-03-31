@@ -109,8 +109,10 @@ inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
     std::cout << "---TensorImpl is at " << impl << std::endl;
     c10::StorageImpl* storage = impl->storage().unsafeGetStorageImpl();
     c10::SymInt offset = impl->storage_offset();
-    std::cout << "---Storage is at " << storage << " " << typeid(storage).name() << std::endl;
-    std::cout << "---Offset is " << offset << " " << typeid(offset).name() << std::endl;
+    std::cout << "---Storage is at " << storage << std::endl;
+    std::cout << "---Offset is " << offset << std::endl;
+    std::cout << "--tensor.sizes() = " << tensor.sizes() << std::endl;
+    std::cout << "--tensor.is_contiguous() = " << tensor.is_contiguous() << std::endl;
     AT_ASSERTM(offset == 0, "Expected zero offset on MPS storage.");
 
     Buffer<scalar_t> buffer(dims);
