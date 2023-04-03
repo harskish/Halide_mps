@@ -12,6 +12,8 @@
 #include "ATen/mps/MPSStream.h"
 #include <iostream>
 
+#include <dispatch/dispatch.h> // GCD
+
 using at::mps::MPSStream;
 
 namespace Halide {
@@ -38,54 +40,47 @@ typedef halide_metal_command_queue mtl_command_queue;
 // For debugging symbol names:
 // nm -gU .cache/torch_ops/test_fun_gpu/.../test_fun_gpu.so | grep get_default_mtl_device
 
+void sync_stream(void* user_context) {
+    MPSStream* stream = ((Halide::PyTorch::UserContext*)user_context)->stream;
+
+    // End kernel coalescing => make sure no work is pending a commit
+    //stream->synchronize(at::mps::SyncType::COMMIT);
+    //stream->synchronize(at::mps::SyncType::COMMIT_AND_WAIT);
+    //stream->synchronize(at::mps::SyncType::NONE);
+    //stream->commit(true); // flush
+    stream->commit(false); // don't flush
+}
+
+void metal_pre_run(void* user_context) {
+    MPSStream* stream = ((Halide::PyTorch::UserContext*)user_context)->stream;
+    dispatch_sync_f(stream->queue(), user_context, sync_stream);
+}
+
 mtl_device *get_default_mtl_device(void *user_context) {
-    std::cout << "---Using overridden get_default_mtl_device" << std::endl;
-    std::cout << "---Metal - Using user_context at: " << user_context << std::endl;
     auto ctx = (Halide::PyTorch::UserContext*)user_context;
     return (mtl_device*)ctx->stream->device();
 }
 
 mtl_command_queue *new_command_queue(mtl_device *device, void *user_context) {
-    std::cout << "---Using overridden new_command_queue" << std::endl;
-    auto ctx = (Halide::PyTorch::UserContext*)user_context;
-    if ((void*)device != (void*)ctx->stream->device()) {
+    MPSStream* stream = ((Halide::PyTorch::UserContext*)user_context)->stream;
+    if ((void*)device != (void*)stream->device()) {
         std::cout << "ERROR: devices don't match" << std::endl;
     }
-    return (mtl_command_queue*)ctx->stream->commandQueue();
+
+    return (mtl_command_queue*)stream->commandQueue();
 }
+
+
+
+// Use mpsAllocator?
+// mtl_buffer *new_buffer(mtl_device *device, size_t length) {}
+
+// Call appropriate?
+// mtl_command_buffer *new_command_buffer(mtl_command_queue *queue, const char *label, size_t label_len) {}
 
 } // namespace Metal
 } // namespace Internal
 } // namespace Runtime
 } // namespace Halide
-
-// Get device associated with stream
-// typedef void* MTLDevice;
-// stream << get_indent() << "void* device = stream->device();\n";
-// stream << get_indent() << "std::cout << \"device: \" << device << std::endl;\n";
-
-// Get command queue that was created in stream constructor
-// typedef void* MTLCommandQueue_t;
-// stream << get_indent() << "void* cmdQueue = stream->commandQueue();\n";
-// stream << get_indent() << "std::cout << \"cmdQueue: \" << cmdQueue << std::endl;\n";
-
-// Creates new command buffer from command queue
-// MTLCommandQueue.makeCommandBuffer() -> MTLCommandBuffer
-// => Should call ObjC code from <MPSStream.mm>, is that file being compiled?
-//    (or is the symbol found in torch itself?)
-// stream << get_indent() << "MTLCommandBuffer_t commandBuff = stream->commandBuffer();\n"; // <MPSStream.h>
-// stream << get_indent() << "std::cout << \"commandBuff: \" << commandBuff << std::endl;\n";
-
-// ObjC calls, not needed? (can call via msgSend on Halide side)
-//stream << get_indent() << "MTLComputeCommandEncoder_t compute_encoder = [commandBuff computeCommandEncoder];\n"; // creates new
-
-// stream << get_indent() << "dispatch_queue_t dptQueue = stream->queue();\n";
-// stream << get_indent() << "std::cout << \"dptQueue: \" << dptQueue << std::endl;\n";
-
-// stream << get_indent() << "c10::DeviceIndex devIdx = stream->device_index();\n";
-// stream << get_indent() << "std::cout << \"devIdx: \" << devIdx << std::endl;\n";
-
-// stream << get_indent() << "c10::Stream streamRaw = stream->unwrap();\n";
-// stream << get_indent() << "std::cout << \"streamRaw: \" << streamRaw << std::endl;\n";
 
 #endif /* end of include guard: HL_PYTORCH_METAL_HELPERS_H */

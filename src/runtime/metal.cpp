@@ -32,6 +32,10 @@ struct mtl_library;
 struct mtl_function;
 struct mtl_compile_options;
 
+WEAK void metal_pre_run(void* user_context) {
+    return;
+}
+
 WEAK mtl_buffer *new_buffer(mtl_device *device, size_t length) {
     typedef mtl_buffer *(*new_buffer_method)(objc_id device, objc_sel sel, size_t length, size_t options);
     new_buffer_method method = (new_buffer_method)&objc_msgSend;
@@ -729,7 +733,7 @@ WEAK int halide_metal_copy_to_host(void *user_context, halide_buffer_t *buffer) 
     return 0;
 }
 
-WEAK int halide_metal_run(void *user_context,
+int _halide_metal_run_impl(void *user_context,
                           void *state_ptr,
                           const char *entry_name,
                           int blocksX, int blocksY, int blocksZ,
@@ -738,6 +742,7 @@ WEAK int halide_metal_run(void *user_context,
                           size_t arg_sizes[],
                           void *args[],
                           int8_t arg_is_buffer[]) {
+
 #ifdef DEBUG_RUNTIME
     uint64_t t_before = halide_current_time_ns(user_context);
 #endif
@@ -895,6 +900,25 @@ WEAK int halide_metal_run(void *user_context,
 #endif
 
     return 0;
+}
+
+WEAK int halide_metal_run(void *user_context,
+                          void *state_ptr,
+                          const char *entry_name,
+                          int blocksX, int blocksY, int blocksZ,
+                          int threadsX, int threadsY, int threadsZ,
+                          int shared_mem_bytes,
+                          size_t arg_sizes[],
+                          void *args[],
+                          int8_t arg_is_buffer[]) {
+
+    metal_pre_run(user_context);
+    
+    return _halide_metal_run_impl(
+        user_context, state_ptr, entry_name,
+        blocksX, blocksY, blocksZ,
+        threadsX, threadsY, threadsZ,
+        shared_mem_bytes, arg_sizes, args, arg_is_buffer);
 }
 
 WEAK int halide_metal_device_and_host_malloc(void *user_context, struct halide_buffer_t *buffer) {

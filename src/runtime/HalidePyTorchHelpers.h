@@ -106,13 +106,13 @@ inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
     // Check that offset is zero
     // Check that strides are normal
     c10::TensorImpl* impl = tensor.unsafeGetTensorImpl();
-    std::cout << "---TensorImpl is at " << impl << std::endl;
+    //std::cout << "---TensorImpl is at " << impl << std::endl;
     c10::StorageImpl* storage = impl->storage().unsafeGetStorageImpl();
     c10::SymInt offset = impl->storage_offset();
-    std::cout << "---Storage is at " << storage << std::endl;
-    std::cout << "---Offset is " << offset << std::endl;
-    std::cout << "--tensor.sizes() = " << tensor.sizes() << std::endl;
-    std::cout << "--tensor.is_contiguous() = " << tensor.is_contiguous() << std::endl;
+    //std::cout << "---Storage is at " << storage << std::endl;
+    //std::cout << "---Offset is " << offset << std::endl;
+    //std::cout << "--tensor.sizes() = " << tensor.sizes() << std::endl;
+    //std::cout << "--tensor.is_contiguous() = " << tensor.is_contiguous() << std::endl;
     AT_ASSERTM(offset == 0, "Expected zero offset on MPS storage.");
 
     Buffer<scalar_t> buffer(dims);
