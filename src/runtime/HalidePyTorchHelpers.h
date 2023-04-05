@@ -113,7 +113,7 @@ inline Buffer<scalar_t> wrap_metal(at::Tensor &tensor) {
     //std::cout << "---Offset is " << offset << std::endl;
     //std::cout << "--tensor.sizes() = " << tensor.sizes() << std::endl;
     //std::cout << "--tensor.is_contiguous() = " << tensor.is_contiguous() << std::endl;
-    AT_ASSERTM(offset == 0, "Expected zero offset on MPS storage.");
+    AT_ASSERTM(offset == c10::SymInt(0), "Expected zero offset on MPS storage.");
 
     Buffer<scalar_t> buffer(dims);
 
