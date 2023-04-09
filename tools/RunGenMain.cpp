@@ -3,6 +3,10 @@
 using namespace Halide::RunGen;
 using Halide::Tools::BenchmarkConfig;
 
+// Real implementation in HalidePyTorchCudaHelpers.h
+// Only needed for PT extensions, use noop here
+extern "C" void set_cuda_fun_overrides() {}
+
 namespace {
 
 struct RegisteredFilter {

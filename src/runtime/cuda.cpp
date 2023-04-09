@@ -279,9 +279,6 @@ public:
 #ifdef DEBUG_RUNTIME
         halide_start_clock(user_context);
 #endif
-#ifdef _MSC_VER
-        set_cuda_fun_overrides(); // defined in HalidePyTorchCudaHelpers.h
-#endif
         status = halide_cuda_acquire_context(user_context, &context);
         if (status) {
             return;
