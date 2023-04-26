@@ -38,39 +38,39 @@ endfunction()
 
 # =================================================================
 
-add_halide_generator(anderson2021_demo.generator
-                     SOURCES demo_generator.cpp)
+# add_halide_generator(anderson2021_demo.generator
+#                      SOURCES demo_generator.cpp)
 
-add_halide_library(anderson2021_demo FROM anderson2021_demo.generator
-                   GENERATOR demo
-                   TARGETS cmake
-                   FEATURES cuda cuda_capability_70
-                   AUTOSCHEDULER Halide::Anderson2021
-                   REGISTRATION DEMO_REGISTRATION_FILE)
+# add_halide_library(anderson2021_demo FROM anderson2021_demo.generator
+#                    GENERATOR demo
+#                    TARGETS cmake
+#                    FEATURES cuda cuda_capability_70
+#                    AUTOSCHEDULER Halide::Anderson2021
+#                    REGISTRATION DEMO_REGISTRATION_FILE)
 
-add_executable(anderson2021_demo_apps_autoscheduler ${DEMO_REGISTRATION_FILE})
-target_link_libraries(anderson2021_demo_apps_autoscheduler PRIVATE anderson2021_demo Halide::RunGenMain)
+# add_executable(anderson2021_demo_apps_autoscheduler ${DEMO_REGISTRATION_FILE})
+# target_link_libraries(anderson2021_demo_apps_autoscheduler PRIVATE anderson2021_demo Halide::RunGenMain)
 
-add_anderson2021_test(anderson2021_demo_apps_autoscheduler
-                   COMMAND anderson2021_demo_apps_autoscheduler --benchmarks=all --benchmark_min_time=1 --estimate_all --skip_bad_environment)
+# add_anderson2021_test(anderson2021_demo_apps_autoscheduler
+#                    COMMAND anderson2021_demo_apps_autoscheduler --benchmarks=all --benchmark_min_time=1 --estimate_all --skip_bad_environment)
 
 # =================================================================
 
-add_halide_generator(anderson2021_included_schedule_file.generator
-                     SOURCES included_schedule_file_generator.cpp)
+# add_halide_generator(anderson2021_included_schedule_file.generator
+#                      SOURCES included_schedule_file_generator.cpp)
 
-add_halide_library(anderson2021_included_schedule_file FROM anderson2021_included_schedule_file.generator
-                   GENERATOR included_schedule_file
-                   TARGETS cmake
-                   FEATURES cuda cuda_capability_70
-                   AUTOSCHEDULER Halide::Anderson2021
-                   REGISTRATION anderson2021_included_schedule_reg)
+# add_halide_library(anderson2021_included_schedule_file FROM anderson2021_included_schedule_file.generator
+#                    GENERATOR included_schedule_file
+#                    TARGETS cmake
+#                    FEATURES cuda cuda_capability_70
+#                    AUTOSCHEDULER Halide::Anderson2021
+#                    REGISTRATION anderson2021_included_schedule_reg)
 
-add_executable(anderson2021_demo_included_schedule_file ${anderson2021_included_schedule_reg})
-target_link_libraries(anderson2021_demo_included_schedule_file PRIVATE anderson2021_included_schedule_file Halide::RunGenMain)
+# add_executable(anderson2021_demo_included_schedule_file ${anderson2021_included_schedule_reg})
+# target_link_libraries(anderson2021_demo_included_schedule_file PRIVATE anderson2021_included_schedule_file Halide::RunGenMain)
 
-add_anderson2021_test(anderson2021_demo_included_schedule_file
-                   COMMAND anderson2021_demo_included_schedule_file --benchmarks=all --benchmark_min_time=1 --estimate_all --skip_bad_environment)
+# add_anderson2021_test(anderson2021_demo_included_schedule_file
+#                   COMMAND anderson2021_demo_included_schedule_file --benchmarks=all --benchmark_min_time=1 --estimate_all --skip_bad_environment)
 
 # =================================================================
 # Smaller tests
